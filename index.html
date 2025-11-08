@@ -3,44 +3,461 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>My Trading Signals Page</title>
+  <title>Live Trading Dashboard</title>
+  <!-- Chart.js for price charts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  <!-- TradingView Lightweight Charts (optional, for advanced charting) -->
+  <script src="https://unpkg.com/lightweight-charts@3/dist/lightweight-charts.standalone.production.js"></script>
+  
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #121212;
-      color: #e0e0e0;
-      margin: 40px;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
+      color: #e0e0e0;
+      padding: 20px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1400px;
+      margin: auto;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
     h1 {
       color: #00ff99;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 0 0 20px #00ff9944;
     }
-    p {
-      font-size: 1.2em;
+    
+    .subtitle {
+      color: #888;
+      font-size: 1.1em;
     }
-    .content {
-      max-width: 600px;
-      margin: auto;
-      background: #1f1f1f;
-      padding: 20px;
+    
+    .controls {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .refresh-btn {
+      padding: 12px 30px;
+      background: #00ff99;
+      color: #000;
+      border: none;
       border-radius: 8px;
-      box-shadow: 0 0 10px #00ff99aa;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin: 0 10px;
+    }
+    
+    .refresh-btn:hover {
+      background: #00cc77;
+      transform: scale(1.05);
+    }
+    
+    .refresh-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .assets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 25px;
+      margin-bottom: 40px;
+    }
+    
+    .asset-card {
+      background: #1f1f2e;
+      border: 2px solid #00ff9944;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 8px 32px rgba(0, 255, 153, 0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .asset-card:hover {
+      border-color: #00ff99;
+      box-shadow: 0 8px 32px rgba(0, 255, 153, 0.3);
+      transform: translateY(-5px);
+    }
+    
+    .asset-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
+    }
+    
+    .asset-name {
+      font-size: 1.8em;
+      font-weight: bold;
+      color: #00ff99;
+    }
+    
+    .asset-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+    
+    .info-box {
+      flex: 1;
+      min-width: 100px;
+    }
+    
+    .info-label {
+      font-size: 0.9em;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .info-value {
+      font-size: 1.4em;
+      font-weight: bold;
+      color: #00ff99;
+      margin-top: 5px;
+    }
+    
+    .price-change.positive {
+      color: #00ff99;
+    }
+    
+    .price-change.negative {
+      color: #ff3300;
+    }
+    
+    .chart-container {
+      position: relative;
+      height: 200px;
+      margin-bottom: 15px;
+      background: #151520;
+      border-radius: 8px;
+      padding: 10px;
+    }
+    
+    .status {
+      text-align: center;
+      padding: 20px;
+      background: #1f1f2e;
+      border-radius: 8px;
+      color: #888;
+      margin-top: 20px;
+    }
+    
+    .status.loading {
+      color: #00ff99;
+    }
+    
+    .status.error {
+      color: #ff3300;
+    }
+    
+    .timestamp {
+      font-size: 0.9em;
+      color: #666;
+      margin-top: 10px;
+      text-align: center;
     }
   </style>
 </head>
 <body>
-  <div class="content">
-    <h1>Welcome to My Trading Signals</h1>
-    <p>This page shows the latest AI-driven trading signals for your favorite assets: BTC, ETH, SOL, AMZN, TSLA, GOOGL, AAPL.</p>
-    <ul>
-      <li>Bitcoin (BTC): Buy on dips near $100,000 support.</li>
-      <li>Ethereum (ETH): Monitor for breakout above $3,500.</li>
-      <li>Solana (SOL): Watch for rebound from $20 level.</li>
-      <li>Amazon (AMZN): Short if price fails $244 support.</li>
-      <li>Tesla (TSLA): Sell/short near resistance $470.</li>
-      <li>Google (GOOGL): Hold, buy breakout above $287.</li>
-      <li>Apple (AAPL): Long above $176, strong momentum.</li>
-    </ul>
-    <p>Updated live using AI analysis and market data.</p>
+  <div class="container">
+    <header>
+      <h1>📊 Live Trading Dashboard</h1>
+      <p class="subtitle">Real-time price tracking for BTC, ETH, SOL, GOOGL, TSLA, AMZN</p>
+    </header>
+    
+    <div class="controls">
+      <button class="refresh-btn" onclick="fetchAllData()">🔄 Refresh Data</button>
+      <button class="refresh-btn" onclick="toggleAutoRefresh()">⏱️ Auto Refresh: <span id="auto-status">OFF</span></button>
+    </div>
+    
+    <div id="status" class="status loading">Loading price data...</div>
+    
+    <div id="assets-container" class="assets-grid"></div>
+    
+    <div class="timestamp">
+      Last updated: <span id="last-update">Never</span>
+    </div>
   </div>
+
+  <script>
+    // Asset configurations
+    const ASSETS = [
+      { symbol: 'BTC', name: 'Bitcoin', type: 'crypto', color: '#f7931a' },
+      { symbol: 'ETH', name: 'Ethereum', type: 'crypto', color: '#627eea' },
+      { symbol: 'SOL', name: 'Solana', type: 'crypto', color: '#00d4aa' },
+      { symbol: 'GOOGL', name: 'Google', type: 'stock', color: '#4285f4' },
+      { symbol: 'TSLA', name: 'Tesla', type: 'stock', color: '#e82127' },
+      { symbol: 'AMZN', name: 'Amazon', type: 'stock', color: '#ff9900' }
+    ];
+
+    let autoRefreshInterval = null;
+    let assetCharts = {};
+
+    // Fetch price data from CoinGecko (free, no auth required)
+    async function fetchPriceData(symbol, type) {
+      try {
+        let url;
+        if (type === 'crypto') {
+          // CoinGecko API for crypto
+          const cryptoMap = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'SOL': 'solana'
+          };
+          const cryptoId = cryptoMap[symbol];
+          url = `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoId}&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true`;
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          const cryptoData = data[cryptoId];
+          
+          return {
+            price: cryptoData.usd,
+            change24h: cryptoData.usd_24h_change,
+            marketCap: cryptoData.usd_market_cap,
+            volume24h: cryptoData.usd_24h_vol
+          };
+        } else {
+          // Alpha Vantage API for stocks (free tier)
+          // Note: Alpha Vantage requires an API key. Using a demo key here (limited calls)
+          const apiKey = 'demo'; // You can get a free key from alphavantage.co
+          url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          if (data['Global Quote']) {
+            const quote = data['Global Quote'];
+            return {
+              price: parseFloat(quote['05. price']),
+              change24h: parseFloat(quote['09. change percent']) || 0,
+              marketCap: 'N/A',
+              volume24h: quote['06. volume']
+            };
+          }
+          throw new Error('Stock data unavailable');
+        }
+      } catch (error) {
+        console.error(`Error fetching ${symbol}:`, error);
+        return null;
+      }
+    }
+
+    // Fetch historical data for charts
+    async function fetchHistoricalData(symbol, type) {
+      try {
+        if (type === 'crypto') {
+          const cryptoMap = {
+            'BTC': 'bitcoin',
+            'ETH': 'ethereum',
+            'SOL': 'solana'
+          };
+          const cryptoId = cryptoMap[symbol];
+          const url = `https://api.coingecko.com/api/v3/coins/${cryptoId}/market_chart?vs_currency=usd&days=7`;
+          
+          const response = await fetch(url);
+          const data = await response.json();
+          return data.prices.map(p => ({ time: p[0], price: p[1] }));
+        } else {
+          // For stocks, we'll use a simplified mock data
+          // In production, use a proper API like Alpha Vantage or Finnhub
+          return generateMockStockData(symbol);
+        }
+      } catch (error) {
+        console.error(`Error fetching historical data for ${symbol}:`, error);
+        return [];
+      }
+    }
+
+    // Generate mock stock data (replace with real API in production)
+    function generateMockStockData(symbol) {
+      const data = [];
+      const now = Date.now();
+      let price = 100 + Math.random() * 400;
+
+      for (let i = 168; i > 0; i--) {
+        const change = (Math.random() - 0.5) * 10;
+        price = Math.max(price + change, 50);
+        data.push({
+          time: now - i * 3600000,
+          price: price
+        });
+      }
+      return data;
+    }
+
+    // Create or update chart
+    function createChart(symbol, historicalData) {
+      const ctx = document.getElementById(`chart-${symbol}`);
+      if (!ctx) return;
+
+      const labels = historicalData.map(d => new Date(d.time).toLocaleDateString());
+      const prices = historicalData.map(d => d.price);
+
+      if (assetCharts[symbol]) {
+        assetCharts[symbol].destroy();
+      }
+
+      const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: `${symbol} Price`,
+            data: prices,
+            borderColor: '#00ff99',
+            backgroundColor: 'rgba(0, 255, 153, 0.1)',
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: false,
+              ticks: {
+                color: '#888'
+              },
+              grid: {
+                color: '#2a2a3a'
+              }
+            },
+            x: {
+              ticks: {
+                color: '#888',
+                maxTicksLimit: 4
+              },
+              grid: {
+                color: '#2a2a3a'
+              }
+            }
+          }
+        }
+      });
+
+      assetCharts[symbol] = chart;
+    }
+
+    // Render asset card
+    function renderAssetCard(asset, data) {
+      const container = document.getElementById('assets-container');
+      const changeClass = data && data.change24h >= 0 ? 'positive' : 'negative';
+      const changeSymbol = data && data.change24h >= 0 ? '📈' : '📉';
+      const price = data ? `$${data.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Loading...';
+      const change = data ? `${changeSymbol} ${data.change24h.toFixed(2)}%` : 'N/A';
+
+      let cardHTML = `
+        <div class="asset-card">
+          <div class="asset-header">
+            <div class="asset-name">${asset.symbol}</div>
+            <div class="asset-name" style="font-size: 0.8em; color: #888;">${asset.name}</div>
+          </div>
+          <div class="asset-info">
+            <div class="info-box">
+              <div class="info-label">Price</div>
+              <div class="info-value">${price}</div>
+            </div>
+            <div class="info-box">
+              <div class="info-label">24h Change</div>
+              <div class="info-value price-change ${changeClass}">${change}</div>
+            </div>
+          </div>
+          <div class="chart-container">
+            <canvas id="chart-${asset.symbol}"></canvas>
+          </div>
+          <div class="info-label" style="color: #666; font-size: 0.8em;">7-day price chart</div>
+        </div>
+      `;
+
+      const existing = container.querySelector(`[data-symbol="${asset.symbol}"]`);
+      const card = document.createElement('div');
+      card.setAttribute('data-symbol', asset.symbol);
+      card.innerHTML = cardHTML;
+
+      if (existing) {
+        existing.replaceWith(card);
+      } else {
+        container.appendChild(card);
+      }
+    }
+
+    // Fetch all data and render
+    async function fetchAllData() {
+      const statusEl = document.getElementById('status');
+      statusEl.textContent = '⏳ Loading price data...';
+      statusEl.className = 'status loading';
+
+      try {
+        for (const asset of ASSETS) {
+          const data = await fetchPriceData(asset.symbol, asset.type);
+          renderAssetCard(asset, data);
+
+          if (data) {
+            const historicalData = await fetchHistoricalData(asset.symbol, asset.type);
+            if (historicalData.length > 0) {
+              setTimeout(() => createChart(asset.symbol, historicalData), 100);
+            }
+          }
+
+          // Rate limiting to avoid API throttling
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        statusEl.textContent = '✅ Data loaded successfully';
+        statusEl.className = 'status';
+        document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+      } catch (error) {
+        statusEl.textContent = '❌ Error loading data: ' + error.message;
+        statusEl.className = 'status error';
+      }
+    }
+
+    // Auto-refresh toggle
+    function toggleAutoRefresh() {
+      const autoStatusEl = document.getElementById('auto-status');
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        autoStatusEl.textContent = 'OFF';
+      } else {
+        fetchAllData();
+        autoRefreshInterval = setInterval(fetchAllData, 60000); // Refresh every 60 seconds
+        autoStatusEl.textContent = 'ON';
+      }
+    }
+
+    // Initial load
+    fetchAllData();
+  </script>
 </body>
 </html>
