@@ -6,8 +6,6 @@
   <title>Live Trading Dashboard</title>
   <!-- Chart.js for price charts -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-  <!-- TradingView Lightweight Charts (optional, for advanced charting) -->
-  <script src="https://unpkg.com/lightweight-charts@3/dist/lightweight-charts.standalone.production.js"></script>
   
   <style>
     * {
@@ -18,8 +16,8 @@
     
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
-      color: #e0e0e0;
+      background: linear-gradient(135deg, #292F36 0%, #1a1e26 100%);
+      color: #8F7A6E;
       padding: 20px;
       min-height: 100vh;
     }
@@ -35,14 +33,14 @@
     }
     
     h1 {
-      color: #00ff99;
+      color: #A41F13;
       font-size: 2.5em;
       margin-bottom: 10px;
-      text-shadow: 0 0 20px #00ff9944;
+      text-shadow: 0 0 20px #A41F1344;
     }
     
     .subtitle {
-      color: #888;
+      color: #8F7A6E;
       font-size: 1.1em;
     }
     
@@ -53,8 +51,8 @@
     
     .refresh-btn {
       padding: 12px 30px;
-      background: #00ff99;
-      color: #000;
+      background: #A41F13;
+      color: #FAF5F1;
       border: none;
       border-radius: 8px;
       font-size: 16px;
@@ -65,7 +63,7 @@
     }
     
     .refresh-btn:hover {
-      background: #00cc77;
+      background: #8a1a0f;
       transform: scale(1.05);
     }
     
@@ -81,18 +79,19 @@
     }
     
     .asset-card {
-      background: #1f1f2e;
-      border: 2px solid #00ff9944;
+      background: #E0DBD8;
+      border: 3px solid #A41F13;
       border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 8px 32px rgba(0, 255, 153, 0.1);
+      box-shadow: 0 8px 32px rgba(164, 31, 19, 0.15);
       transition: all 0.3s ease;
     }
     
     .asset-card:hover {
-      border-color: #00ff99;
-      box-shadow: 0 8px 32px rgba(0, 255, 153, 0.3);
+      border-color: #A41F13;
+      box-shadow: 0 8px 32px rgba(164, 31, 19, 0.3);
       transform: translateY(-5px);
+      background: #FAF5F1;
     }
     
     .asset-header {
@@ -100,14 +99,20 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 15px;
-      border-bottom: 2px solid #333;
+      border-bottom: 3px solid #A41F13;
       padding-bottom: 10px;
     }
     
     .asset-name {
       font-size: 1.8em;
       font-weight: bold;
-      color: #00ff99;
+      color: #A41F13;
+    }
+    
+    .asset-name-small {
+      font-size: 0.8em;
+      color: #8F7A6E;
+      font-weight: normal;
     }
     
     .asset-info {
@@ -124,55 +129,58 @@
     
     .info-label {
       font-size: 0.9em;
-      color: #888;
+      color: #8F7A6E;
       text-transform: uppercase;
       letter-spacing: 1px;
+      font-weight: 600;
     }
     
     .info-value {
       font-size: 1.4em;
       font-weight: bold;
-      color: #00ff99;
+      color: #292F36;
       margin-top: 5px;
     }
     
     .price-change.positive {
-      color: #00ff99;
+      color: #A41F13;
     }
     
     .price-change.negative {
-      color: #ff3300;
+      color: #8F7A6E;
     }
     
     .chart-container {
       position: relative;
       height: 200px;
       margin-bottom: 15px;
-      background: #151520;
+      background: #FAF5F1;
       border-radius: 8px;
       padding: 10px;
+      border: 2px solid #E0DBD8;
     }
     
     .status {
       text-align: center;
       padding: 20px;
-      background: #1f1f2e;
+      background: #E0DBD8;
       border-radius: 8px;
-      color: #888;
+      color: #8F7A6E;
       margin-top: 20px;
+      border: 2px solid #A41F13;
     }
     
     .status.loading {
-      color: #00ff99;
+      color: #A41F13;
     }
     
     .status.error {
-      color: #ff3300;
+      color: #A41F13;
     }
     
     .timestamp {
       font-size: 0.9em;
-      color: #666;
+      color: #8F7A6E;
       margin-top: 10px;
       text-align: center;
     }
@@ -202,12 +210,12 @@
   <script>
     // Asset configurations
     const ASSETS = [
-      { symbol: 'BTC', name: 'Bitcoin', type: 'crypto', color: '#f7931a' },
-      { symbol: 'ETH', name: 'Ethereum', type: 'crypto', color: '#627eea' },
-      { symbol: 'SOL', name: 'Solana', type: 'crypto', color: '#00d4aa' },
-      { symbol: 'GOOGL', name: 'Google', type: 'stock', color: '#4285f4' },
-      { symbol: 'TSLA', name: 'Tesla', type: 'stock', color: '#e82127' },
-      { symbol: 'AMZN', name: 'Amazon', type: 'stock', color: '#ff9900' }
+      { symbol: 'BTC', name: 'Bitcoin', type: 'crypto', color: '#A41F13' },
+      { symbol: 'ETH', name: 'Ethereum', type: 'crypto', color: '#292F36' },
+      { symbol: 'SOL', name: 'Solana', type: 'crypto', color: '#8F7A6E' },
+      { symbol: 'GOOGL', name: 'Google', type: 'stock', color: '#A41F13' },
+      { symbol: 'TSLA', name: 'Tesla', type: 'stock', color: '#292F36' },
+      { symbol: 'AMZN', name: 'Amazon', type: 'stock', color: '#8F7A6E' }
     ];
 
     let autoRefreshInterval = null;
@@ -218,7 +226,6 @@
       try {
         let url;
         if (type === 'crypto') {
-          // CoinGecko API for crypto
           const cryptoMap = {
             'BTC': 'bitcoin',
             'ETH': 'ethereum',
@@ -238,24 +245,19 @@
             volume24h: cryptoData.usd_24h_vol
           };
         } else {
-          // Alpha Vantage API for stocks (free tier)
-          // Note: Alpha Vantage requires an API key. Using a demo key here (limited calls)
-          const apiKey = 'demo'; // You can get a free key from alphavantage.co
-          url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${symbol}&apikey=${apiKey}`;
+          // Yahoo Finance API alternative (no key required)
+          const yfinanceUrl = `https://query1.finance.yahoo.com/v10/finance/quoteSummary/${symbol}?modules=price`;
           
-          const response = await fetch(url);
+          const response = await fetch(yfinanceUrl);
           const data = await response.json();
+          const quoteData = data.quoteSummary.result[0].price;
           
-          if (data['Global Quote']) {
-            const quote = data['Global Quote'];
-            return {
-              price: parseFloat(quote['05. price']),
-              change24h: parseFloat(quote['09. change percent']) || 0,
-              marketCap: 'N/A',
-              volume24h: quote['06. volume']
-            };
-          }
-          throw new Error('Stock data unavailable');
+          return {
+            price: quoteData.regularMarketPrice.raw,
+            change24h: quoteData.regularMarketChangePercent.raw,
+            marketCap: 'N/A',
+            volume24h: quoteData.regularMarketVolume.raw
+          };
         }
       } catch (error) {
         console.error(`Error fetching ${symbol}:`, error);
@@ -279,8 +281,6 @@
           const data = await response.json();
           return data.prices.map(p => ({ time: p[0], price: p[1] }));
         } else {
-          // For stocks, we'll use a simplified mock data
-          // In production, use a proper API like Alpha Vantage or Finnhub
           return generateMockStockData(symbol);
         }
       } catch (error) {
@@ -289,7 +289,7 @@
       }
     }
 
-    // Generate mock stock data (replace with real API in production)
+    // Generate mock stock data
     function generateMockStockData(symbol) {
       const data = [];
       const now = Date.now();
@@ -307,7 +307,7 @@
     }
 
     // Create or update chart
-    function createChart(symbol, historicalData) {
+    function createChart(symbol, historicalData, color) {
       const ctx = document.getElementById(`chart-${symbol}`);
       if (!ctx) return;
 
@@ -325,13 +325,14 @@
           datasets: [{
             label: `${symbol} Price`,
             data: prices,
-            borderColor: '#00ff99',
-            backgroundColor: 'rgba(0, 255, 153, 0.1)',
-            borderWidth: 2,
+            borderColor: color,
+            backgroundColor: color + '15',
+            borderWidth: 3,
             fill: true,
             tension: 0.4,
             pointRadius: 0,
-            pointHoverRadius: 6
+            pointHoverRadius: 6,
+            pointBackgroundColor: color
           }]
         },
         options: {
@@ -346,19 +347,19 @@
             y: {
               beginAtZero: false,
               ticks: {
-                color: '#888'
+                color: '#8F7A6E'
               },
               grid: {
-                color: '#2a2a3a'
+                color: '#E0DBD8'
               }
             },
             x: {
               ticks: {
-                color: '#888',
+                color: '#8F7A6E',
                 maxTicksLimit: 4
               },
               grid: {
-                color: '#2a2a3a'
+                color: '#E0DBD8'
               }
             }
           }
@@ -379,8 +380,10 @@
       let cardHTML = `
         <div class="asset-card">
           <div class="asset-header">
-            <div class="asset-name">${asset.symbol}</div>
-            <div class="asset-name" style="font-size: 0.8em; color: #888;">${asset.name}</div>
+            <div>
+              <div class="asset-name">${asset.symbol}</div>
+              <div class="asset-name-small">${asset.name}</div>
+            </div>
           </div>
           <div class="asset-info">
             <div class="info-box">
@@ -395,7 +398,7 @@
           <div class="chart-container">
             <canvas id="chart-${asset.symbol}"></canvas>
           </div>
-          <div class="info-label" style="color: #666; font-size: 0.8em;">7-day price chart</div>
+          <div class="info-label" style="color: #8F7A6E; font-size: 0.8em;">7-day price chart</div>
         </div>
       `;
 
@@ -425,11 +428,10 @@
           if (data) {
             const historicalData = await fetchHistoricalData(asset.symbol, asset.type);
             if (historicalData.length > 0) {
-              setTimeout(() => createChart(asset.symbol, historicalData), 100);
+              setTimeout(() => createChart(asset.symbol, historicalData, asset.color), 100);
             }
           }
 
-          // Rate limiting to avoid API throttling
           await new Promise(resolve => setTimeout(resolve, 500));
         }
 
@@ -451,7 +453,7 @@
         autoStatusEl.textContent = 'OFF';
       } else {
         fetchAllData();
-        autoRefreshInterval = setInterval(fetchAllData, 60000); // Refresh every 60 seconds
+        autoRefreshInterval = setInterval(fetchAllData, 60000);
         autoStatusEl.textContent = 'ON';
       }
     }
