@@ -12,6 +12,7 @@ const SheetsAPI = {
       const url = `https://docs.google.com/spreadsheets/d/${SHEETS_CONFIG.spreadsheetId}/export?format=csv&gid=${SHEETS_CONFIG.positionsGid}`;
       const response = await fetch(url);
       const csv = await response.text();
+      console.log('Positions CSV:', csv);
       const data = parseCSV(csv);
       
       // Filter out empty rows and "NO POSITIONS" entries
@@ -29,9 +30,16 @@ const SheetsAPI = {
   async fetchMarketResearch() {
     try {
       const url = `https://docs.google.com/spreadsheets/d/${SHEETS_CONFIG.spreadsheetId}/export?format=csv&gid=${SHEETS_CONFIG.marketResearchGid}`;
+      console.log('Fetching from URL:', url);
+      
       const response = await fetch(url);
       const csv = await response.text();
-      return parseCSV(csv);
+      console.log('Market Research Raw CSV:', csv);
+      
+      const data = parseCSV(csv);
+      console.log('Market Research Parsed Data:', data);
+      
+      return data;
     } catch (error) {
       console.error('Error fetching market research:', error);
       return [];
