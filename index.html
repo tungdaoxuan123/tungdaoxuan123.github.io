@@ -14,7 +14,7 @@
   </header>
   
   <!-- Status message -->
-  <div id="status" class="status loading">🔄 Loading data...</div>
+  <div id="error-container"></div>
   
   <div class="container">
     <!-- LEFT COLUMN: Portfolio Info -->
@@ -33,10 +33,18 @@
           <span class="info-label">P&L %:</span>
           <span class="info-value percentage" id="total-pnl-pct">0.00%</span>
         </div>
+        <div class="info-row">
+          <span class="info-label">Free:</span>
+          <span class="info-value currency" id="free-balance">$0.00</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Used:</span>
+          <span class="info-value currency" id="used-balance">$0.00</span>
+        </div>
       </div>
       
       <div class="panel">
-        <h2>📍 Positions</h2>
+        <h2>📍 Active Positions</h2>
         <table class="positions-table" id="positions-table">
           <thead>
             <tr>
@@ -44,13 +52,18 @@
               <th>Side</th>
               <th>Entry</th>
               <th>Mark</th>
-              <th>P&L %</th>
+              <th>P&L</th>
             </tr>
           </thead>
           <tbody id="positions-body">
             <tr><td colspan="5" class="position-empty">Loading...</td></tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="panel">
+        <h3>Unrealized P&L: <span class="info-value" id="unrealized-pnl">$0.00</span></h3>
+        <h3>Realized P&L: <span class="info-value" id="realized-pnl">$0.00</span></h3>
       </div>
     </div>
     
@@ -73,16 +86,201 @@
     </div>
   </div>
 
+
   <!-- Timestamp footer -->
-  <div style="text-align: center; padding: 12px; color: #8b949e; font-size: 0.85em;">
+  <div style="text-align: center; padding: 12px; color: #8b949e; font-size: 0.85em; border-top: 1px solid #30363d;">
     Last updated: <span id="last-update">Never</span>
   </div>
 
-  <!-- Scripts in correct dependency order -->
-  <script src="js/utils.js"></script>
-  <script src="js/api.js"></script>
+
   <script src="js/sheets.js"></script>
-  <script src="js/charts.js"></script>
-  <script src="js/main.js"></script>
+  <script>
+    // Your Google Sheet ID
+    const SHEET_ID = '1NADCWY48TpJU4jBrw0Bow1TEGxHBBwsTxwEstHDQPyU';
+
+    // Initialize SheetsAPI
+    const sheetsAPI = new SheetsAPI({
+      debug: false,
+      autoRefresh: true,
+      refreshInterval: 60000 // Refresh every 60 seconds
+    });
+
+    // Listen for data updates
+    sheetsAPI.on('onLoad', (data) => {
+      console.log(`Data loaded: ${data.type}`);
+    });
+
+    sheetsAPI.on('onRefresh', (data) => {
+      console.log('Data refreshed:', data.timestamp);
+      loadPortfolioData();
+    });
+
+    sheetsAPI.on('onError', (data) => {
+      showError(`Error loading ${data.type}: ${data.error}`);
+    });
+
+    async function refreshAllData() {
+      sheetsAPI.clearCache();
+      await loadPortfolioData();
+    }
+
+    async function loadPortfolioData() {
+      try {
+        // Show loading
+        document.getElementById('error-container').innerHTML = '';
+
+        // Fetch data from sheets
+        const { positions, marketResearch } = await sheetsAPI.fetchAllData(false);
+
+        // Update portfolio display
+        updatePortfolioDisplay(positions, marketResearch);
+
+        // Update timestamp
+        document.getElementById('last-update').textContent = new Date().toLocaleString();
+
+      } catch (error) {
+        console.error('Error loading portfolio:', error);
+        showError('Failed to load portfolio data. Make sure the Google Sheet is public.');
+      }
+    }
+
+    function calculateBalance(positions) {
+      let totalUnrealized = 0;
+      let totalRealized = 0;
+      let totalCollateral = 0;
+
+      positions.forEach(pos => {
+        const contracts = parseFloat(pos.Contracts || 0);
+        const unrealized = parseFloat(pos['Unrealized P&L'] || 0);
+        const realized = parseFloat(pos['Realized P&L'] || 0);
+        const collateral = parseFloat(pos.Collateral || 0);
+
+        totalUnrealized += unrealized;
+        totalRealized += realized;
+        totalCollateral += collateral;
+      });
+
+      const totalBalance = totalCollateral;
+      const totalPnL = totalUnrealized + totalRealized;
+      const pnlPercent = totalBalance > 0 ? (totalPnL / totalBalance * 100) : 0;
+      const freeBalance = totalBalance - totalUnrealized;
+
+      return {
+        total: totalBalance,
+        free: freeBalance,
+        used: totalUnrealized,
+        unrealized: totalUnrealized,
+        realized: totalRealized,
+        totalPnL: totalPnL,
+        pnlPercent: pnlPercent
+      };
+    }
+
+    function updatePortfolioDisplay(positions, marketResearch) {
+      const balanceInfo = calculateBalance(positions);
+
+      // Update portfolio values
+      document.getElementById('total-balance').textContent = `$${balanceInfo.total.toFixed(2)}`;
+      document.getElementById('total-pnl').textContent = `$${balanceInfo.totalPnL.toFixed(4)}`;
+      document.getElementById('total-pnl-pct').textContent = `${balanceInfo.pnlPercent.toFixed(2)}%`;
+      document.getElementById('free-balance').textContent = `$${balanceInfo.free.toFixed(2)}`;
+      document.getElementById('used-balance').textContent = `$${balanceInfo.used.toFixed(2)}`;
+      document.getElementById('unrealized-pnl').textContent = `$${balanceInfo.unrealized.toFixed(4)}`;
+      document.getElementById('realized-pnl').textContent = `$${balanceInfo.realized.toFixed(4)}`;
+
+      // Color code P&L
+      const pnlElement = document.getElementById('total-pnl');
+      const pnlPctElement = document.getElementById('total-pnl-pct');
+      
+      if (balanceInfo.totalPnL >= 0) {
+        pnlElement.style.color = '#3fb950';
+        pnlPctElement.style.color = '#3fb950';
+      } else {
+        pnlElement.style.color = '#f85149';
+        pnlPctElement.style.color = '#f85149';
+      }
+
+      // Update positions table
+      updatePositionsTable(positions);
+
+      // Update market research
+      updateMarketResearch(marketResearch);
+    }
+
+    function updatePositionsTable(positions) {
+      const tbody = document.getElementById('positions-body');
+      const activePositions = positions.filter(p => parseFloat(p.Contracts || 0) > 0);
+
+      if (activePositions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="position-empty">No active positions</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = activePositions.map(pos => {
+        const pnl = parseFloat(pos['Unrealized P&L'] || 0);
+        const pnlPct = parseFloat(pos['P&L %'] || 0);
+        const pnlClass = pnl >= 0 ? 'positive' : 'negative';
+
+        return `
+          <tr>
+            <td>${pos.Symbol}</td>
+            <td>${pos.Side}</td>
+            <td>$${parseFloat(pos['Entry Price'] || 0).toFixed(2)}</td>
+            <td>$${parseFloat(pos['Mark Price'] || 0).toFixed(2)}</td>
+            <td class="${pnlClass}">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(4)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function updateMarketResearch(marketResearch) {
+      const container = document.getElementById('market-research');
+
+      if (!marketResearch || marketResearch.length === 0) {
+        container.innerHTML = '<p style="color: #8b949e;">No market research data available</p>';
+        return;
+      }
+
+      // Parse and display market research
+      let html = '';
+      let currentSection = '';
+
+      marketResearch.forEach(item => {
+        // Look for headers and content
+        Object.entries(item).forEach(([key, value]) => {
+          if (!value) return;
+
+          const val = value.toString().trim();
+          
+          // Check if it's a section header
+          if (val.startsWith('##')) {
+            currentSection = val.replace('##', '').trim();
+            html += `<h4>${currentSection}</h4>`;
+          } else if (val.startsWith('|')) {
+            // Table row
+            const cells = val.split('|').filter(c => c.trim() && c !== '---');
+            if (cells.length > 0) {
+              html += `<p>${cells.join(' | ')}</p>`;
+            }
+          } else if (val && val !== 'Type' && val !== 'Generated' && val !== 'Timestamp') {
+            // Regular content
+            html += `<p>${val}</p>`;
+          }
+        });
+      });
+
+      container.innerHTML = html || '<p style="color: #8b949e;">Loading market research...</p>';
+    }
+
+    function showError(message) {
+      const errorContainer = document.getElementById('error-container');
+      errorContainer.innerHTML = `<div class="error">⚠️ ${message}</div>`;
+    }
+
+    // Load data on page load
+    window.addEventListener('load', () => {
+      loadPortfolioData();
+    });
+  </script>
 </body>
 </html>
