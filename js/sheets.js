@@ -1,5 +1,5 @@
 // Google Sheets Integration - Complete Hybrid System
-// Updated: November 10, 2025
+// Updated: November 11, 2025
 // Maintains original simplicity while adding advanced features
 // Copy this entire file to: /js/sheets.js
 
@@ -102,21 +102,30 @@ const Cache = {
   }
 };
 
-// ==================== MAIN API ====================
-const SheetsAPI = {
-  // Configuration
-  config: SHEETS_CONFIG,
-  cache: true,
-  debug: true,
+// ==================== MAIN CLASS ====================
+class SheetsAPI {
+  constructor(config = {}) {
+    this.config = config.spreadsheetId ? config : SHEETS_CONFIG;
+    this.spreadsheetId = config.spreadsheetId || SHEETS_CONFIG.spreadsheetId;
+    this.positionsGid = config.positionsGid || SHEETS_CONFIG.positionsGid;
+    this.marketResearchGid = config.marketResearchGid || SHEETS_CONFIG.marketResearchGid;
+    
+    this.cache = config.cache !== false;
+    this.debug = config.debug !== false;
+    this.autoRefresh = config.autoRefresh || false;
+    this.refreshInterval = config.refreshInterval || 60000;
+    
+    this.listeners = {
+      onLoad: [],
+      onError: [],
+      onRefresh: []
+    };
+    
+    if (this.autoRefresh) {
+      this.startAutoRefresh();
+    }
+  }
 
-  // Event listeners
-  listeners: {
-    onLoad: [],
-    onError: [],
-    onRefresh: []
-  },
-
-  // Logging
   log(message, data = null) {
     if (this.debug) {
       if (data) {
@@ -125,7 +134,7 @@ const SheetsAPI = {
         console.log(`[SheetsAPI] ${message}`);
       }
     }
-  },
+  }
 
   error(message, err = null) {
     if (this.debug) {
@@ -135,21 +144,20 @@ const SheetsAPI = {
         console.error(`[SheetsAPI ERROR] ${message}`);
       }
     }
-  },
+  }
 
-  // Event system
   on(event, callback) {
     if (this.listeners[event]) {
       this.listeners[event].push(callback);
       this.log(`Listener added: ${event}`);
     }
-  },
+  }
 
   off(event, callback) {
     if (this.listeners[event]) {
       this.listeners[event] = this.listeners[event].filter(cb => cb !== callback);
     }
-  },
+  }
 
   emit(event, data) {
     if (this.listeners[event]) {
@@ -161,11 +169,10 @@ const SheetsAPI = {
         }
       });
     }
-  },
+  }
 
   // ==================== FETCH METHODS ====================
   async fetchPositions(useCache = true) {
-    // Check cache first
     if (useCache) {
       const cached = Cache.get('positions');
       if (cached) {
@@ -175,7 +182,7 @@ const SheetsAPI = {
     }
 
     try {
-      const url = `https://docs.google.com/spreadsheets/d/${this.config.spreadsheetId}/export?format=csv&gid=${this.config.positionsGid}&t=${Date.now()}`;
+      const url = `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/export?format=csv&gid=${this.positionsGid}&t=${Date.now()}`;
       
       this.log('📥 Fetching positions...');
       const response = await fetch(url);
@@ -189,7 +196,6 @@ const SheetsAPI = {
       
       const data = parseCSV(csv);
       
-      // Filter empty rows and NO POSITIONS entries
       const filtered = data.filter(row => 
         row && 
         row.Symbol && 
@@ -200,12 +206,10 @@ const SheetsAPI = {
       
       this.log(`✓ Found ${filtered.length} active positions`);
       
-      // Store in cache
       if (this.cache) {
         Cache.set('positions', filtered);
       }
       
-      // Emit event
       this.emit('onLoad', { type: 'positions', count: filtered.length, fromCache: false });
       
       return filtered;
@@ -214,10 +218,9 @@ const SheetsAPI = {
       this.emit('onError', { type: 'positions', error });
       return [];
     }
-  },
+  }
 
   async fetchMarketResearch(useCache = true) {
-    // Check cache first
     if (useCache) {
       const cached = Cache.get('marketResearch');
       if (cached) {
@@ -227,7 +230,7 @@ const SheetsAPI = {
     }
 
     try {
-      const url = `https://docs.google.com/spreadsheets/d/${this.config.spreadsheetId}/export?format=csv&gid=${this.config.marketResearchGid}&t=${Date.now()}`;
+      const url = `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/export?format=csv&gid=${this.marketResearchGid}&t=${Date.now()}`;
       
       this.log('📥 Fetching market research...');
       const response = await fetch(url);
@@ -239,7 +242,6 @@ const SheetsAPI = {
       const csv = await response.text();
       this.log('✓ Market Research CSV received');
       
-      // Remove empty lines and clean data
       const lines = csv.split('\n').filter(line => line.trim().length > 0);
       this.log(`✓ Market Research: ${lines.length} lines processed`);
       
@@ -251,12 +253,10 @@ const SheetsAPI = {
       
       this.log(`✓ Parsed ${filtered.length} rows from Market Research`);
       
-      // Store in cache
       if (this.cache) {
         Cache.set('marketResearch', filtered);
       }
       
-      // Emit event
       this.emit('onLoad', { type: 'marketResearch', count: filtered.length, fromCache: false });
       
       return filtered;
@@ -265,7 +265,7 @@ const SheetsAPI = {
       this.emit('onError', { type: 'marketResearch', error });
       return [];
     }
-  },
+  }
 
   async fetchAllData(useCache = true) {
     this.log('🔄 Fetching all sheets...');
@@ -284,20 +284,20 @@ const SheetsAPI = {
       this.emit('onError', { type: 'all', error });
       return { positions: [], marketResearch: [] };
     }
-  },
+  }
 
   // ==================== FILTERING ====================
   filterBySymbol(data, symbol) {
     return data.filter(row => row.Symbol === symbol);
-  },
+  }
 
   filterByStatus(data, status) {
     return data.filter(row => row.Signal?.toLowerCase() === status.toLowerCase());
-  },
+  }
 
   filterBySentiment(data, sentiment) {
     return data.filter(row => row.Sentiment?.toLowerCase() === sentiment.toLowerCase());
-  },
+  }
 
   // ==================== STATISTICS ====================
   calculateStats(positions) {
@@ -365,7 +365,7 @@ const SheetsAPI = {
       topAsset,
       worstAsset
     };
-  },
+  }
 
   // ==================== EXPORT ====================
   exportToCSV(data, filename = 'export.csv') {
@@ -392,7 +392,7 @@ const SheetsAPI = {
     link.click();
 
     this.log(`✓ Exported ${data.length} rows to ${filename}`);
-  },
+  }
 
   exportToJSON(data, filename = 'export.json') {
     if (!data || (Array.isArray(data) && data.length === 0)) {
@@ -408,12 +408,12 @@ const SheetsAPI = {
     link.click();
 
     this.log(`✓ Exported to ${filename}`);
-  },
+  }
 
   // ==================== CACHE MANAGEMENT ====================
   clearCache(key = null) {
     Cache.clear(key);
-  },
+  }
 
   getCacheStatus() {
     return {
@@ -421,7 +421,7 @@ const SheetsAPI = {
       cacheExpiry: Cache.expiry,
       items: Array.from(Cache.store.keys())
     };
-  },
+  }
 
   // ==================== AUTO REFRESH ====================
   autoRefreshTimer: null,
@@ -444,7 +444,7 @@ const SheetsAPI = {
         research: marketResearch.length
       });
     }, this.autoRefreshInterval);
-  },
+  }
 
   stopAutoRefresh() {
     if (this.autoRefreshTimer) {
@@ -452,26 +452,26 @@ const SheetsAPI = {
       this.autoRefreshTimer = null;
       this.log('Auto-refresh stopped');
     }
-  },
+  }
 
   // ==================== UTILITY ====================
   getMetadata() {
     return {
-      spreadsheetId: this.config.spreadsheetId,
-      positionsGid: this.config.positionsGid,
-      marketResearchGid: this.config.marketResearchGid,
+      spreadsheetId: this.spreadsheetId,
+      positionsGid: this.positionsGid,
+      marketResearchGid: this.marketResearchGid,
       cacheEnabled: this.cache,
       debugEnabled: this.debug,
       cacheStatus: this.getCacheStatus()
     };
-  },
+  }
 
   configure(options = {}) {
     if (options.debug !== undefined) this.debug = options.debug;
     if (options.cache !== undefined) this.cache = options.cache;
     if (options.cacheExpiry !== undefined) Cache.expiry = options.cacheExpiry;
     this.log('Configuration updated', options);
-  },
+  }
 
   reset() {
     this.stopAutoRefresh();
@@ -483,7 +483,7 @@ const SheetsAPI = {
     };
     this.log('SheetsAPI reset');
   }
-};
+}
 
 // ==================== GLOBAL EXPORT ====================
 window.SheetsAPI = SheetsAPI;
@@ -491,4 +491,4 @@ window.parseCSV = parseCSV;
 window.Cache = Cache;
 
 console.log('✓ SheetsAPI loaded and ready');
-console.log('Usage: SheetsAPI.fetchAllData()');
+console.log('Usage: const api = new SheetsAPI({debug: false, autoRefresh: true});');
