@@ -2,7 +2,7 @@
 
 const SHEETS_CONFIG = {
   spreadsheetId: '1NADCWY48TpJU4jBrw0Bow1TEGxHBBwsTxwEstHDQPyU',
-  positionsGid: '0',           // First sheet (All Positions)
+  positionsGid: '1658667671',           // First sheet (All Positions)
   marketResearchGid: '615736256' // Second sheet (Market Research)
 };
 
