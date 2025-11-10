@@ -424,8 +424,8 @@ class SheetsAPI {
   }
 
   // ==================== AUTO REFRESH ====================
-  autoRefreshTimer: null,
-  autoRefreshInterval: 60000,
+  autoRefreshTimer = null;
+  autoRefreshInterval = 60000;
 
   startAutoRefresh(interval = 60000) {
     if (this.autoRefreshTimer) {
