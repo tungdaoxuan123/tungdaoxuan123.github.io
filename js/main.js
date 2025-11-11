@@ -1,4 +1,10 @@
 // Main application logic
+// Initialize SheetsAPI instance at the top level
+const api = new SheetsAPI({
+  debug: true,           // Set to false in production
+  cache: true,
+  autoRefresh: false     // We'll handle refresh manually
+});
 
 async function renderPositions(positions) {
   const tbody = document.getElementById('positions-body');
@@ -152,8 +158,8 @@ async function refreshAllData() {
   console.log('\n➜ REFRESH START ➜➜➜➜➜➜➜➜➜➜➜➜➜➜➜➜');
   
   try {
-    // Fetch all data
-    const { positions, marketResearch } = await SheetsAPI.fetchAllData();
+    // ✅ FIXED: Use the api instance instead of calling SheetsAPI directly
+    const { positions, marketResearch } = await api.fetchAllData();
     
     // Render positions
     renderPositions(positions);
@@ -161,8 +167,12 @@ async function refreshAllData() {
     // Render market research
     renderMarketResearch(marketResearch);
     
-    // Render charts
-    await ChartManager.renderCharts();
+    // Render charts (make sure ChartManager is defined)
+    if (window.ChartManager) {
+      await window.ChartManager.renderCharts();
+    } else {
+      console.warn('⚠️  ChartManager not loaded');
+    }
     
     statusEl.textContent = '✅ Data loaded successfully';
     statusEl.className = 'status';
@@ -179,6 +189,8 @@ async function refreshAllData() {
 // Initial load
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🚀 Dashboard initialized');
+  console.log('✓ SheetsAPI instance created:', api);
+  
   refreshAllData();
   
   // Auto-refresh every 5 minutes
